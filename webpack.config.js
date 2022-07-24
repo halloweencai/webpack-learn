@@ -1,7 +1,9 @@
 // webpack是node写出来的，要用node写法
 let path = require('path')  // 内置模块，直接引用
 let HtmlWebpackPlugin = require('html-webpack-plugin')
-let MiniCssExtractPlugin = require('mini-css-extract-plugin')
+let MiniCssExtractPlugin = require('mini-css-extract-plugin')  // 提取css到单独的文件中
+let OptimizeCss = require('optimize-css-assets-webpack-plugin')
+let UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 module.exports = {
     // devServer: {
     //     port: 3000,  // 端口号配置
@@ -11,7 +13,17 @@ module.exports = {
     //         directory: path.join(__dirname, './dist')
     //     }
     // },
-    mode: 'development', // 模式，默认两种，production和development
+    optimization: {  // 优化项
+        minimizer: [
+            new UglifyJsPlugin({
+                cache: true,
+                parallel: true,
+                sourceMap: true
+            }),
+            new OptimizeCss()
+        ]
+    },
+    mode: 'production', // 模式，默认两种，production和development
     entry: './src/index.js', // 入口
     output: {
         filename: 'bundle.[hash:8].js',  // 打包后的文件名
@@ -21,14 +33,17 @@ module.exports = {
         new HtmlWebpackPlugin({
             template: './src/index.html',
             filename: 'index.html',
-            minify: {
-                // 去掉属性双引号
-                removeAttributeQuotes: true,
-                // 折叠空格，变成一行
-                collapseWhitespace: true
-            },
+            // minify: {
+            //     // 去掉属性双引号
+            //     removeAttributeQuotes: true,
+            //     // 折叠空格，变成一行
+            //     collapseWhitespace: true
+            // },
             // 加上hash戳
-            hash: true
+            // hash: true
+        }),
+        new MiniCssExtractPlugin({
+            filename: 'main.css'
         })
     ],
     module: { // 模块
@@ -44,17 +59,9 @@ module.exports = {
                 // 处理css
                 test: /\.css$/, 
                 use: [
-                    {
-                        loader: 'style-loader',
-                        options: {
-                            // insertAt: 'top'  // css的样式插入到顶部，避免head中的style被覆盖
-                            // insertAt 已废弃
-                            insert: () => {
-
-                            }
-                        }
-                    },
-                    'css-loader'
+                    MiniCssExtractPlugin.loader,
+                    'css-loader',
+                    'postcss-loader'
                 ]
             },
             {
@@ -62,24 +69,9 @@ module.exports = {
                 // stylus -> stylus-loader
                 test: /\.less$/, 
                 use: [
-                    {
-                        loader: 'style-loader',
-                        options: {
-                            insert: function(element) {
-                                var parent = document.querySelector('head');
-                                var lastInsertedElement = window._lastElementInsertedByStyleLoader;
-                                if (!lastInsertedElement) {
-                                    parent.insertBefore(element, parent.firstChild);
-                                } else if (lastInsertedElement.nextSibling) {
-                                    parent.insertBefore(element, lastInsertedElement.nextSibling)
-                                } else {
-                                    parent.appendChild(element)
-                                }
-    
-                            }
-                        }
-                    },
+                    MiniCssExtractPlugin.loader,
                     'css-loader',  // @import 解析路径
+                    'postcss-loader',  // 使用autoprefixer自动添加浏览器前缀
                     'less-loader' // 把less -> css
                 ]
             }
